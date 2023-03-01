@@ -1,0 +1,180 @@
+blueprint:
+  name: Away Mode for Lights
+  description: Uses a timer and a schedule to randomly turn lights on and off
+  domain: automation
+  input:
+    target_light:
+      name: Light
+      description: The light to turn on and off
+      selector:
+        entity:
+          domain: light
+    away_timer:
+      name: Timer
+      description: The timer to trigger on and off randomly
+      selector:
+        entity:
+          domain: timer
+    away_scheduler:
+      name: Schedule
+      description: Morning and evening schedules for away
+      selector:
+        entity:
+          domain: schedule
+    away_indicator:
+      name: Mode
+      description: A input boolean to enable or disable away mode
+      selector:
+        entity:
+          domain: input_boolean
+    trigger_elevation:
+      name: Elevation
+      description: Sun elevation above which the mode is disabled, morning or night
+      default: 6
+      selector:
+        number:
+          min: -10
+          max: 50
+          unit_of_measurement: "deg."
+          mode: slider
+    min_on_time:
+      name: MinOn
+      description: The minimum seconds per cycle the light will be on, up to 6 hrs
+      default: 600
+      selector:
+        number:
+          min: 10
+          max: 21599
+          unit_of_measurement: "sec."
+          mode: slider
+    max_on_time:
+      name: MaxOn
+      description: The maximum seconds per cycle the light will be on, up to 6 hrs, MAKE IT MORE THAN MIN
+      default: 3600
+      selector:
+        number:
+          min: 10
+          max: 21599
+          unit_of_measurement: "sec."
+          mode: slider
+    max_off_time:
+      name: MaxOff
+      description: The maximum seconds per cycle the light will be off, up to 6 hrs
+      default: 900
+      selector:
+        number:
+          min: 10
+          max: 21599
+          unit_of_measurement: "sec."
+          mode: slider
+
+
+variables:
+   target_light: !input target_light
+   away_timer: !input away_timer
+   away_scheduler: !input away_scheduler
+   away_indicator: !input away_indicator
+   trigger_elevation: !input trigger_elevation
+   # Make sure that Nin On is less than Max on to protect against setup errors
+   MinOn: !input min_on_time
+   _UnsafeMaxOn: !input max_on_time
+   MaxOn: '{{ [MinOn + 10, _UnsafeMaxOn]|max }}'
+   MaxOff: !input max_off_time
+trigger:
+- platform: state
+  entity_id:
+  - !input away_timer
+  to: idle
+  id: timer_trigger
+- platform: state
+  entity_id:
+  - !input away_scheduler
+- platform: state
+  entity_id:
+  - !input away_indicator
+- platform: numeric_state
+  entity_id: sun.sun
+  attribute: elevation
+  below: !input trigger_elevation
+  above: !input trigger_elevation
+condition: []
+action:
+# IF boolean indiates occupants are away AND
+#   Scheduler indicates away lighting is in elect AND
+#   The Sun is below the specified degrees of elevation (morning or night
+#      so that turning on the lights is random
+- if:
+  - condition: and
+    conditions:
+    - condition: state
+      entity_id: !input away_indicator
+      state: 'on'
+    - condition: state
+      entity_id: !input away_scheduler
+      state: 'on'
+    - condition: numeric_state
+      entity_id: sun.sun
+      attribute: elevation
+      below: !input trigger_elevation
+  then:
+  # IF the automation was triggered by the timer, its already running so toggle the light
+  - if:
+    - condition: trigger
+      id: timer_trigger
+    then:
+    - service: light.toggle
+      data: {}
+      target:
+        entity_id: !input target_light
+    - service: timer.start
+      data: 
+        duration: >
+          {% if is_state(target_light, "on") %}
+            {{ range(([MinOn, MaxOn]|min),([MinOn, MaxOn]|max))|random|int }}
+          {% else %}
+            {{ range(5, MaxOff)|random|int }}
+          {% endif %}
+      target:
+        entity_id: !input away_timer
+    # ELSE the automation was not triggered by the timer, set the off delay and wait for the next trigger
+    else:
+      - service: logbook.log
+        data:
+          name: "{{ target_light }}"
+          message: >
+            Initiating Away Process for light with Min On: {{ MinOn }}, Max On: {{ MaxOn }}, Max Off: {{ MaxOff }}
+      - service: timer.start
+        data:
+          duration: '{{ range(5, MaxOff)|random|int }}'
+        target:
+          entity_id: !input away_timer
+  # ELSE conditions for AWAY mode are no longer valid, shut it down
+  else:
+    # IF entered the automation via a timer and the light is on, can just shut it off
+  - if:
+    - condition: trigger
+      id: timer_trigger
+    then:
+    - if:
+        - condition: state
+          entity_id: !input target_light
+          state: "on"
+      then:
+        - service: light.turn_off
+          data: {}
+          target:
+            entity_id: !input target_light
+    # ELSE scheduler or other has initiated shutdown. If the light is on start a random delay up to 5 min 
+    # and the next time the timer triggers it will turn off the light
+    else:
+      - if:
+        - condition: state
+          entity_id: !input target_light
+          state: "on"
+        then:
+        - service: timer.start
+          data:
+            duration: '{{ range(5, 600)|random|int }}'
+          target:
+            entity_id: !input away_timer
+mode: restart

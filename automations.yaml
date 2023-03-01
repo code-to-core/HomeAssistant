@@ -1,0 +1,584 @@
+- id: '1676649608831'
+  alias: Upstairs HVAC Fan On
+  description: Turns of the Upstairs HVAC fan 12hr default
+  trigger:
+  - platform: state
+    entity_id:
+    - input_button.start_upstairs_hvac_fan
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'on'
+    target:
+      entity_id: climate.ac
+  mode: single
+- id: '1676649713950'
+  alias: Upstairs HVAC fan off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.upstairs_hvac_fan
+    from: 'on'
+    to: 'off'
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'off'
+    target:
+      entity_id: climate.ac
+  mode: single
+- id: '1676657676490'
+  alias: Circulate HVAC Fans
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.circulate_air
+    to: 'on'
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'on'
+    target:
+      entity_id:
+      - climate.ac
+      - climate.heat
+  mode: single
+- id: '1676657730953'
+  alias: HVAC Fans Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.circulate_air
+    to: 'off'
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'off'
+    target:
+      entity_id:
+      - climate.ac
+      - climate.heat
+  mode: single
+- id: '1676659620380'
+  alias: Summer Circulation Process
+  description: Turn on downstairs HVAC fan if temp > upstairs setting
+  trigger:
+  - platform: time_pattern
+    minutes: /10
+  condition:
+  - condition: state
+    entity_id: climate.ac
+    state: cool
+  - condition: state
+    entity_id: climate.ac
+    attribute: preset_mode
+    state: none
+  - condition: numeric_state
+    entity_id: climate.ac
+    attribute: temperature
+    below: sensor.heat_temperature
+  - condition: time
+    before: '22:00:00'
+    after: '10:00:00'
+    weekday:
+    - sun
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+    - sat
+  action:
+  - if:
+    - condition: state
+      entity_id: timer.hvac_timer
+      state: idle
+      for:
+        hours: 0
+        minutes: 15
+        seconds: 0
+    then:
+    - service: timer.start
+      data:
+        duration: 0:15:00
+      target:
+        entity_id: timer.hvac_timer_heat
+    - service: notify.notify
+      data:
+        message: Starting HVAC Fan to circulate
+    else:
+    - service: timer.start
+      data: {}
+      target:
+        entity_id: timer.hvac_timer_heat
+  mode: single
+- id: '1676668418063'
+  alias: Summer Circulation Start Fan
+  description: ''
+  trigger:
+  - platform: event
+    event_type: timer.started
+    event_data:
+      entity_id: timer.hvac_timer_heat
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'on'
+    target:
+      entity_id: climate.heat
+  mode: single
+- id: '1676671924490'
+  alias: Winter Fan Circulation Process
+  description: Turn on upstairs fan while heating
+  trigger:
+  - platform: time_pattern
+    minutes: /2
+  condition:
+  - condition: state
+    entity_id: climate.heat
+    attribute: hvac_action
+    state: heating
+  - condition: time
+    before: '22:00:00'
+    after: 09:00:00
+    weekday:
+    - sun
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+    - sat
+  action:
+  - if:
+    - condition: state
+      entity_id: timer.hvac_timer_ac
+      state: idle
+      for:
+        hours: 0
+        minutes: 5
+        seconds: 0
+    then:
+    - service: timer.start
+      data:
+        duration: 0:15:00
+      target:
+        entity_id:
+        - timer.hvac_timer_ac
+    else:
+    - service: timer.start
+      data:
+        duration: 0
+      target:
+        entity_id: timer.hvac_timer_ac
+  mode: single
+- id: '1676673016746'
+  alias: Summer Circulation Stop Fan
+  description: ''
+  trigger:
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: timer.hvac_timer_heat
+  - platform: event
+    event_type: timer.cancelled
+    event_data:
+      entity_id: timer.hvac_timer_heat
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'off'
+    target:
+      entity_id: climate.heat
+  mode: single
+- id: '1676673315890'
+  alias: Winter Circulation Start Fan
+  description: ''
+  trigger:
+  - platform: event
+    event_type: timer.started
+    event_data:
+      entity_id: timer.hvac_timer_ac
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'on'
+    target:
+      entity_id: climate.ac
+  mode: single
+- id: '1676673487933'
+  alias: Winter Circulation Stop Fan
+  description: ''
+  trigger:
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: timer.hvac_timer_ac
+  - platform: event
+    event_type: timer.cancelled
+    event_data:
+      entity_id: timer.hvac_timer_ac
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'off'
+    target:
+      device_id: ab2b686c4dd191ca20966f392e0e5859
+  mode: single
+- id: '1676674041914'
+  alias: Circulation Start
+  description: Both Fans on
+  trigger:
+  - platform: state
+    entity_id:
+    - input_button.start_circulation
+  condition: []
+  action:
+  - service: timer.start
+    data:
+      duration: 00:45:00
+    target:
+      entity_id: timer.hvac_timer_circulation
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'on'
+    target:
+      entity_id:
+      - climate.ac
+      - climate.heat
+  mode: single
+- id: '1676674125378'
+  alias: Circulation Stop Fans
+  description: ''
+  trigger:
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: timer.hvac_timer_circulation
+  - platform: event
+    event_type: timer.cancelled
+    event_data:
+      entity_id: timer.hvac_timer_circulation
+  condition: []
+  action:
+  - service: climate.set_fan_mode
+    data:
+      fan_mode: 'off'
+    target:
+      entity_id:
+      - climate.ac
+      - climate.heat
+  mode: single
+- id: '1676917351988'
+  alias: Climate Warning
+  description: ''
+  trigger:
+  - platform: template
+    value_template: ' {{ state_attr(''climate.ac'',''temperature'')|int < state_attr(''climate.heat'',''temperature'')|int
+      + 1 }}'
+  - platform: template
+    value_template: '{{ state_attr(''climate.ac'',''temperature'')|int < state_attr(''climate.mysa_6d7ba0_thermostat'',''temperature'')|int
+      + 1 }}'
+  - platform: template
+    value_template: '{{ state_attr(''climate.ac'',''temperature'')|int < state_attr(''climate.mysa_ad0ef0_thermostat'',''temperature'')|int
+      + 1 }}'
+  - platform: template
+    value_template: '{{ state_attr(''climate.ac'',''temperature'')|int < state_attr(''climate.mysa_ada040_thermostat'',''temperature'')|int
+      + 1 }}'
+  condition: []
+  action:
+  - service: notify.notify
+    data:
+      message: A thermostat has heat > AC
+  mode: single
+- id: '1676931217578'
+  alias: Heat Master Bedroom
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - schedule.heat_schedule
+  - platform: state
+    entity_id:
+    - input_boolean.everyone_away
+  - platform: state
+    entity_id:
+    - climate.heat
+  condition: []
+  action:
+  - if:
+    - condition: state
+      entity_id: schedule.heat_schedule
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.everyone_away
+      state: 'off'
+    - condition: state
+      entity_id: climate.heat
+      state: heat
+    then:
+    - service: climate.turn_on
+      data: {}
+      target:
+        entity_id:
+        - climate.mysa_ad0ef0_thermostat
+    else:
+    - service: climate.turn_off
+      data: {}
+      target:
+        entity_id:
+        - climate.mysa_ad0ef0_thermostat
+  mode: single
+- id: '1676933852438'
+  alias: Conform Thermostats
+  description: Brings setpoint of all thermostats in line for heat
+  trigger:
+  - platform: state
+    entity_id:
+    - climate.heat
+    attribute: temperature
+  - platform: state
+    entity_id:
+    - climate.mysa_6d7ba0_thermostat
+    attribute: hvac_action
+  - platform: state
+    entity_id:
+    - climate.mysa_ada040_thermostat
+    attribute: hvac_action
+  - platform: state
+    entity_id:
+    - climate.mysa_ad0ef0_thermostat
+    attribute: hvac_action
+  condition: []
+  action:
+  - if:
+    - condition: template
+      value_template: '{{ state_attr("climate.mysa_6d7ba0_thermostat", "temperature")|int
+        != state_attr("climate.heat", "temperature")|int }}'
+    then:
+    - service: climate.set_temperature
+      data:
+        temperature: '{{ state_attr("climate.heat", "temperature")|int }}'
+      target:
+        entity_id: climate.mysa_6d7ba0_thermostat
+  - if:
+    - condition: template
+      value_template: '{{ state_attr("climate.mysa_ad0ef0_thermostat", "temperature")|int
+        != state_attr("climate.heat", "temperature")|int }}'
+    then:
+    - service: climate.set_temperature
+      data:
+        temperature: '{{ state_attr("climate.heat", "temperature")|int }}'
+      target:
+        entity_id: climate.mysa_ad0ef0_thermostat
+  - if:
+    - condition: template
+      value_template: '{{ state_attr("climate.mysa_ada040_thermostat", "temperature")|int
+        != state_attr("climate.heat", "temperature")|int }}'
+    then:
+    - service: climate.set_temperature
+      data:
+        temperature: '{{ state_attr("climate.heat", "temperature")|int }}'
+      target:
+        entity_id: climate.mysa_ada040_thermostat
+  mode: single
+- id: '1676992077259'
+  alias: Heat Heathers Bedroom
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - schedule.heat_schedule_heathers_bedroom
+  - platform: state
+    entity_id:
+    - input_boolean.everyone_away
+  - platform: state
+    entity_id:
+    - climate.heat
+  condition: []
+  action:
+  - if:
+    - condition: state
+      entity_id: schedule.heat_schedule_heathers_bedroom
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.everyone_away
+      state: 'off'
+    - condition: state
+      entity_id: climate.heat
+      state: heat
+    then:
+    - service: climate.turn_on
+      data: {}
+      target:
+        entity_id:
+        - climate.mysa_6d7ba0_thermostat
+    else:
+    - service: climate.turn_off
+      data: {}
+      target:
+        entity_id: climate.mysa_6d7ba0_thermostat
+  mode: single
+- id: '1676992157203'
+  alias: Heat She Chi Shed
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - schedule.heat_schedule_she_chi_shed
+  - platform: state
+    entity_id:
+    - input_boolean.everyone_away
+  - platform: state
+    entity_id:
+    - climate.heat
+  condition: []
+  action:
+  - if:
+    - condition: state
+      entity_id: schedule.heat_schedule_she_chi_shed
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.everyone_away
+      state: 'off'
+    - condition: state
+      entity_id: climate.heat
+      state: heat
+    then:
+    - service: climate.turn_on
+      data: {}
+      target:
+        entity_id: climate.mysa_ada040_thermostat
+    else:
+    - service: climate.turn_off
+      data: {}
+      target:
+        entity_id: climate.mysa_ada040_thermostat
+  mode: single
+- id: '1676996700027'
+  alias: Occupancy On Change
+  description: Runs when everyone left or someone returns
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.everyone_away
+  condition: []
+  action:
+  - if:
+    - condition: state
+      entity_id: input_boolean.everyone_away
+      state: 'on'
+    then:
+    - service: script.notify_left_shv
+      data: {}
+    else:
+    - service: script.entered_shv
+      data: {}
+  mode: single
+- id: '1677250452495'
+  alias: Baseboard Energy Watchdog
+  description: Warns if baseboard heating when not scheduled
+  trigger:
+  - platform: state
+    entity_id:
+    - climate.mysa_6d7ba0_thermostat
+    - climate.mysa_ad0ef0_thermostat
+    - climate.mysa_ada040_thermostat
+    attribute: hvac_action
+    to: heating
+  condition:
+  - condition: or
+    conditions:
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: climate.mysa_6d7ba0_thermostat
+        attribute: hvac_action
+        state: heating
+      - condition: state
+        entity_id: schedule.heat_schedule_heathers_bedroom
+        state: 'off'
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: climate.mysa_ada040_thermostat
+        attribute: hvac_action
+        state: heating
+      - condition: state
+        entity_id: climate.mysa_ada040_thermostat
+        state: 'off'
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: climate.mysa_ad0ef0_thermostat
+        attribute: hvac_action
+        state: heating
+      - condition: state
+        entity_id: schedule.heat_schedule
+        state: 'off'
+  action:
+  - service: notify.notify
+    data:
+      message: Baseboard Heating when it shouldnt
+      title: Energy Warning
+  mode: single
+- id: '1677605542773'
+  alias: Randomize Hallway Light
+  description: ''
+  use_blueprint:
+    path: petew/random_light.yaml
+    input:
+      target_light: light.hallway
+      away_timer: timer.timer_hallway_away
+      away_scheduler: schedule.away_lighting_schedule
+      away_indicator: input_boolean.away_active_night
+      trigger_elevation: 6
+- id: '1677619458946'
+  alias: Random
+  description: ''
+  use_blueprint:
+    path: petew/random_light.yaml
+    input:
+      target_light: light.hallway
+      away_timer: timer.timer_hallway_away
+      away_scheduler: schedule.away_lighting_schedule
+      away_indicator: input_boolean.away_active_night
+      trigger_elevation: 48
+      min_on_time: 10
+      max_off_time: 10
+- id: '1677619827135'
+  alias: Randomize Hallway
+  description: ''
+  use_blueprint:
+    path: petew/random_light.yaml
+    input:
+      target_light: light.hallway
+      away_timer: timer.timer_hallway_away
+      away_scheduler: schedule.away_lighting_schedule
+      away_indicator: input_boolean.away_active_night
+      trigger_elevation: 49
+      max_on_time: 30
+      max_off_time: 10
+- id: '1677690789950'
+  alias: Away Mode for Hallway Light
+  description: ''
+  use_blueprint:
+    path: petew/away_mode_for_lights.yaml
+    input:
+      target_light: light.hallway
+      away_timer: timer.timer_hallway_away
+      away_scheduler: schedule.away_lighting_schedule
+      away_indicator: input_boolean.away_active_night
+      min_on_time: 7200
+      max_on_time: 21599
