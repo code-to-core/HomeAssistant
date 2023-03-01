@@ -15,7 +15,7 @@ script: !include scripts.yaml
 scene: !include scenes.yaml
 
 light:
- - platform: decora_wifi
-   username: pw1326@gmail.com
-   password: eE8GP&G39td!k@BE
+  - platform: decora_wifi
+    username: !secret leviton_username
+    password: !secret leviton_password
 
