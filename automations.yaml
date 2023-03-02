@@ -533,43 +533,6 @@
       message: Baseboard Heating when it shouldnt
       title: Energy Warning
   mode: single
-- id: '1677605542773'
-  alias: Randomize Hallway Light
-  description: ''
-  use_blueprint:
-    path: petew/random_light.yaml
-    input:
-      target_light: light.hallway
-      away_timer: timer.timer_hallway_away
-      away_scheduler: schedule.away_lighting_schedule
-      away_indicator: input_boolean.away_active_night
-      trigger_elevation: 6
-- id: '1677619458946'
-  alias: Random
-  description: ''
-  use_blueprint:
-    path: petew/random_light.yaml
-    input:
-      target_light: light.hallway
-      away_timer: timer.timer_hallway_away
-      away_scheduler: schedule.away_lighting_schedule
-      away_indicator: input_boolean.away_active_night
-      trigger_elevation: 48
-      min_on_time: 10
-      max_off_time: 10
-- id: '1677619827135'
-  alias: Randomize Hallway
-  description: ''
-  use_blueprint:
-    path: petew/random_light.yaml
-    input:
-      target_light: light.hallway
-      away_timer: timer.timer_hallway_away
-      away_scheduler: schedule.away_lighting_schedule
-      away_indicator: input_boolean.away_active_night
-      trigger_elevation: 49
-      max_on_time: 30
-      max_off_time: 10
 - id: '1677690789950'
   alias: Away Mode for Hallway Light
   description: ''
