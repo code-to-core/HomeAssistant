@@ -582,3 +582,42 @@
       away_indicator: input_boolean.away_active_night
       min_on_time: 7200
       max_on_time: 21599
+- id: '1677705442917'
+  alias: Away Mode for Downstairs Light
+  description: ''
+  use_blueprint:
+    path: petew/away_mode_for_lights.yaml
+    input:
+      target_light: light.downstairs
+      away_timer: timer.timer_downstairs_away
+      away_scheduler: schedule.away_lighting_schedule
+      away_indicator: input_boolean.away_active_night
+      min_on_time: 10000
+      max_on_time: 21599
+- id: '1677705600661'
+  alias: Away Mode for She Chi Shed Light
+  description: ''
+  use_blueprint:
+    path: petew/away_mode_for_lights.yaml
+    input:
+      target_light: light.light_she_chi_shed
+      away_timer: timer.away_timer_she_chi_shed
+      away_scheduler: schedule.away_lighting_schedule
+      away_indicator: input_boolean.away_active_night
+      trigger_elevation: 4
+      min_on_time: 120
+      max_on_time: 1200
+      max_off_time: 5976
+- id: '1677705694570'
+  alias: Away Mode for Master Light
+  description: ''
+  use_blueprint:
+    path: petew/away_mode_for_lights.yaml
+    input:
+      target_light: light.light_master
+      away_timer: timer.timer_upstairs_away
+      away_scheduler: schedule.away_lighting_schedule
+      away_indicator: input_boolean.away_active_night
+      trigger_elevation: 4
+      max_on_time: 2683
+      max_off_time: 6037
