@@ -81,10 +81,10 @@ variables:
    MaxOn: '{{ [MinOn + 10, _UnsafeMaxOn]|max }}'
    MaxOff: !input max_off_time
 trigger:
-- platform: state
-  entity_id:
-  - !input away_timer
-  to: idle
+- platform: event
+  event_type: timer.finished
+  event_data:
+    entity_id: !input away_timer
   id: timer_trigger
 - platform: state
   entity_id:
@@ -92,11 +92,17 @@ trigger:
 - platform: state
   entity_id:
   - !input away_indicator
+  id: home_away
+- platform: numeric_state
+  entity_id: sun.sun
+  attribute: elevation
+  above: !input trigger_elevation
+  id: sun_up
 - platform: numeric_state
   entity_id: sun.sun
   attribute: elevation
   below: !input trigger_elevation
-  above: !input trigger_elevation
+  id: sun_down
 condition: []
 action:
 # IF boolean indiates occupants are away AND
@@ -164,17 +170,25 @@ action:
           data: {}
           target:
             entity_id: !input target_light
-    # ELSE scheduler or other has initiated shutdown. If the light is on start a random delay up to 5 min 
-    # and the next time the timer triggers it will turn off the light
+    # ELSE scheduler or other has initiated shutdown. 
     else:
+      # If the cause is someone coming home, leave everything to manual intervention and cancel the timer
       - if:
-        - condition: state
-          entity_id: !input target_light
-          state: "on"
-        then:
-        - service: timer.start
-          data:
-            duration: '{{ range(5, 600)|random|int }}'
-          target:
-            entity_id: !input away_timer
+        - condition: trigger
+          id: home_away
+        then: 
+          - service: timer.cancel
+            target:
+              entity_id: !input away_timer
+        else:
+          - if:
+            - condition: state
+              entity_id: !input target_light
+              state: "on"
+            then:
+              - service: timer.start
+                data:
+                  duration: '{{ range(5, 600)|random|int }}'
+                target:
+                  entity_id: !input away_timer
 mode: restart

@@ -545,6 +545,7 @@
       away_indicator: input_boolean.away_active_night
       min_on_time: 7200
       max_on_time: 21599
+      trigger_elevation: 6
 - id: '1677705442917'
   alias: Away Mode for Downstairs Light
   description: ''
