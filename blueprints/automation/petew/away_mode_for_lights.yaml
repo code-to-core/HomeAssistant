@@ -34,7 +34,7 @@ blueprint:
       selector:
         number:
           min: -10
-          max: 50
+          max: 60
           unit_of_measurement: "deg."
           mode: slider
     min_on_time:
@@ -151,36 +151,37 @@ action:
             Initiating Away Process for light with Min On: {{ MinOn }}, Max On: {{ MaxOn }}, Max Off: {{ MaxOff }}
       - service: timer.start
         data:
-          duration: '{{ range(5, MaxOff)|random|int }}'
+          duration: '{{ range(5, 1200)|random|int }}'
         target:
           entity_id: !input away_timer
-  # ELSE conditions for AWAY mode are no longer valid, shut it down
+  # ELSE conditions for AWAY mode are no longer valid, shut it down if no-one is home
   else:
-    # IF entered the automation via a timer and the light is on, can just shut it off
-  - if:
-    - condition: trigger
-      id: timer_trigger
-    then:
+    # If someone is home, don't change anything, just cancel the timer
     - if:
-        - condition: state
-          entity_id: !input target_light
-          state: "on"
+      - condition: state
+        entity_id: !input away_indicator
+        state: 'off'
       then:
-        - service: light.turn_off
-          data: {}
+        - service: timer.cancel
           target:
-            entity_id: !input target_light
-    # ELSE scheduler or other has initiated shutdown. 
-    else:
-      # If the cause is someone coming home, leave everything to manual intervention and cancel the timer
-      - if:
-        - condition: trigger
-          id: home_away
-        then: 
-          - service: timer.cancel
+            entity_id: !input away_timer
+      else:
+        # IF entered the automation via a timer and the light is on, can just shut it off, if off, leave off
+        - if:
+          - condition: and
+            conditions:
+            - condition: trigger
+              id: timer_trigger
+            - condition: state
+              entity_id: !input target_light
+              state: "on"
+          then:
+          - service: light.turn_off
+            data: {}
             target:
-              entity_id: !input away_timer
-        else:
+              entity_id: !input target_light
+          # ELSE scheduler or sun elevation other has initiated shutdown, set timer to turn off light if it's on
+          else:
           - if:
             - condition: state
               entity_id: !input target_light
