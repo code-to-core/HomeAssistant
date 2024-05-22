@@ -34,7 +34,7 @@ blueprint:
       selector:
         number:
           min: -10
-          max: 60
+          max: 90
           unit_of_measurement: "deg."
           mode: slider
     min_on_time:
@@ -80,6 +80,12 @@ variables:
    _UnsafeMaxOn: !input max_on_time
    MaxOn: '{{ [MinOn + 10, _UnsafeMaxOn]|max }}'
    MaxOff: !input max_off_time
+   toggle_duration: >
+       {% if is_state(target_light, "off") %}
+         {{ range(([MinOn, MaxOn]|min),([MinOn, MaxOn]|max))|random|int }}
+       {% else %}
+         {{ range(5, MaxOff)|random|int }}
+       {% endif %}
 trigger:
 - platform: event
   event_type: timer.finished
@@ -124,6 +130,7 @@ action:
       below: !input trigger_elevation
   then:
   # IF the automation was triggered by the timer, its already running so toggle the light
+  # State checked here seem to be the state at the start of the trigger, not as a result of the previous toggle
   - if:
     - condition: trigger
       id: timer_trigger
@@ -134,12 +141,7 @@ action:
         entity_id: !input target_light
     - service: timer.start
       data: 
-        duration: >
-          {% if is_state(target_light, "on") %}
-            {{ range(([MinOn, MaxOn]|min),([MinOn, MaxOn]|max))|random|int }}
-          {% else %}
-            {{ range(5, MaxOff)|random|int }}
-          {% endif %}
+        duration: '{{ toggle_duration }}'
       target:
         entity_id: !input away_timer
     # ELSE the automation was not triggered by the timer, set the off delay and wait for the next trigger
